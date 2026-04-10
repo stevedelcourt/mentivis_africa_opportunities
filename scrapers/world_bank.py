@@ -5,7 +5,7 @@ import random
 from config import SCRAPER_SETTINGS
 
 
-URL = "https://projects.worldbank.org/en/projects-operations/projects-list?lang=en&country=AFR"
+URL = "https://projects.worldbank.org/en/projects-operations/project-by-country"
 
 
 def scrape_world_bank():
@@ -14,27 +14,35 @@ def scrape_world_bank():
     user_agent = random.choice(SCRAPER_SETTINGS["user_agents"])
     headers = {"User-Agent": user_agent}
 
-    try:
-        res = requests.get(URL, headers=headers, timeout=SCRAPER_SETTINGS["timeout"])
+    countries = [
+        ("senegal", "Senegal"),
+        ("cote-d-ivoire", "Côte d'Ivoire"),
+        ("morocco", "Morocco"),
+        ("tunisia", "Tunisia"),
+        ("cameroon", "Cameroon"),
+        ("mali", "Mali"),
+        ("burkina-faso", "Burkina Faso"),
+        ("benin", "Benin"),
+        ("togo", "Togo"),
+        ("niger", "Niger"),
+    ]
 
-        if res.status_code != 200:
-            print(f"World Bank: Status {res.status_code}")
-            return opportunities
+    for country_code, country_name in countries[:5]:
+        try:
+            country_url = f"https://projects.worldbank.org/en/projects-operations/project-by-country/{country_code.upper()}"
+            res = requests.get(country_url, headers=headers, timeout=10)
 
-        soup = BeautifulSoup(res.text, "lxml")
+            if res.status_code != 200:
+                continue
 
-        projects = soup.select(
-            "div.project-item, div.wb-item, article.project, div.results-row"
-        )
+            soup = BeautifulSoup(res.text, "lxml")
 
-        if not projects:
-            projects = soup.select("tr.data-row, div.project-row")
-
-        if not projects:
             all_links = soup.find_all("a", href=True)
-            project_links = [a for a in all_links if "/projects/" in a.get("href", "")][
-                :20
-            ]
+            project_links = [
+                a
+                for a in all_links
+                if "/projects/" in a.get("href", "") and a.get_text(strip=True)
+            ][:10]
 
             for link in project_links:
                 title = link.get_text(strip=True)
@@ -49,7 +57,7 @@ def scrape_world_bank():
                             "description": title,
                             "organization": "World Bank",
                             "organization_type": "multilateral",
-                            "country": "Africa",
+                            "country": country_name,
                             "budget": "",
                             "deadline": "",
                             "url": href,
@@ -57,46 +65,8 @@ def scrape_world_bank():
                             "source": "world_bank",
                         }
                     )
-        else:
-            for p in projects[:30]:
-                title_elem = p.select_one("h2, h3, .title, .project-title, a")
-                desc_elem = p.select_one("p, .description, .summary")
-                country_elem = p.select_one(".country, .location")
-                budget_elem = p.select_one(".amount, .budget")
-
-                title = title_elem.get_text(strip=True) if title_elem else ""
-                desc = desc_elem.get_text(strip=True) if desc_elem else ""
-                country = (
-                    country_elem.get_text(strip=True) if country_elem else "Africa"
-                )
-                budget = budget_elem.get_text(strip=True) if budget_elem else ""
-
-                if title and len(title) > 5:
-                    link = (
-                        title_elem.get("href")
-                        if title_elem and title_elem.name == "a"
-                        else ""
-                    )
-                    if not link.startswith("http") and link:
-                        link = "https://projects.worldbank.org" + link
-
-                    opportunities.append(
-                        {
-                            "title": title,
-                            "description": desc or title,
-                            "organization": "World Bank",
-                            "organization_type": "multilateral",
-                            "country": country,
-                            "budget": budget,
-                            "deadline": "",
-                            "url": link or URL,
-                            "date": datetime.today().strftime("%Y-%m-%d"),
-                            "source": "world_bank",
-                        }
-                    )
-
-    except Exception as e:
-        print(f"World Bank scraping error: {e}")
+        except Exception as e:
+            print(f"World Bank scraping error: {e}")
 
     return opportunities
 
