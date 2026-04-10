@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 from datetime import datetime
 from bs4 import BeautifulSoup
 import time
@@ -23,15 +22,27 @@ def get_selenium_driver():
         return None
 
 
+def normalize_url(href, base_url="https://procurement-notices.undp.org"):
+    """Ensure URL is complete"""
+    if not href:
+        return base_url
+    if href.startswith("http"):
+        return href
+    if href.startswith("/"):
+        return base_url + href
+    return base_url + "/" + href
+
+
 def scrape_undp():
-    """Scrape UNDP procurement notices - extract actual tenders"""
+    """Scrape UNDP with proper full URLs"""
     opportunities = []
     driver = None
+
+    BASE_URL = "https://procurement-notices.undp.org"
 
     african_countries = {
         "senegal": "Sénégal",
         "cote d'ivoire": "Côte d'Ivoire",
-        "ivory coast": "Côte d'Ivoire",
         "morocco": "Maroc",
         "tunisia": "Tunisie",
         "cameroon": "Cameroun",
@@ -41,9 +52,6 @@ def scrape_undp():
         "togo": "Togo",
         "niger": "Niger",
         "guinea": "Guinée",
-        "congo": "Congo",
-        "gabon": "Gabon",
-        "madagascar": "Madagascar",
     }
 
     try:
@@ -51,61 +59,42 @@ def scrape_undp():
         if not driver:
             return opportunities
 
-        # Try to filter by Africa
-        driver.get("https://procurement-notices.undp.org/")
+        driver.get(BASE_URL + "/")
         time.sleep(8)
-
-        # Find Africa filter button
-        try:
-            africa_link = driver.find_element(
-                By.XPATH, "//a[contains(text(), 'Africa')]"
-            )
-            africa_link.click()
-            time.sleep(3)
-        except:
-            pass
 
         soup = BeautifulSoup(driver.page_source, "lxml")
 
-        # Find all notice entries - they have title spans
-        titles = soup.select("span.title, div.title, h3, a[href*='notice']")
+        # Find all notice links - usually in tables or with notice_id
+        all_links = soup.find_all("a", href=True)
 
-        if not titles:
-            # Try finding tables with tender data
-            rows = soup.select("table tbody tr, div.notice-row")
-            for row in rows:
-                title_elem = row.select_one("span.title, td:first-child, a")
-                if not title_elem:
-                    continue
+        for link in all_links:
+            href = link.get("href", "")
+            title = link.get_text(strip=True)
 
-                title = title_elem.get_text(strip=True)
-                if not title or len(title) < 10:
-                    continue
+            if not title or len(title) < 15:
+                continue
 
-                # Get parent link for URL
-                link = title_elem.find_parent("a")
-                href = link.get("href", "") if link else ""
+            # Skip navigation
+            if any(
+                w in title.lower()
+                for w in ["about", "supplier", "training", "faq", "principle"]
+            ):
+                continue
+
+            # Check if it's a notice link
+            if "notice" in href or "view" in href or "notice_id" in href:
+                full_url = normalize_url(href, BASE_URL)
+
+                # Extract country
+                country = ""
+                for hint, c in african_countries.items():
+                    if hint in title.lower():
+                        country = c
+                        break
 
                 # Extract ref number
                 ref_match = re.search(r"(UNDP-[A-Z]{3}-\d+)", title)
                 ref = ref_match.group(1) if ref_match else ""
-
-                # Determine deadline
-                deadline = ""
-                deadline_elem = row.select_one("span.deadline, td:nth-child(5)")
-                if deadline_elem:
-                    deadline = deadline_elem.get_text(strip=True)
-
-                # Extract country
-                country = ""
-                title_lower = title.lower()
-                for hint, c in african_countries.items():
-                    if hint in title_lower:
-                        country = c
-                        break
-
-                if href and not href.startswith("http"):
-                    href = "https://procurement-notices.undp.org" + href
 
                 opportunities.append(
                     {
@@ -115,74 +104,14 @@ def scrape_undp():
                         "organization_type": "onu",
                         "country": country,
                         "budget": "",
-                        "deadline": deadline,
-                        "url": href or "https://procurement-notices.undp.org/",
+                        "deadline": "",
+                        "url": full_url,
                         "date": datetime.today().strftime("%Y-%m-%d"),
                         "source": "undp",
                     }
                 )
 
-        # Extract from links if no table found
-        all_links = soup.find_all("a", href=True)
-        for link in all_links:
-            title = link.get_text(strip=True)
-            if not title or len(title) < 15:
-                continue
-
-            # Skip navigation links
-            nav_words = [
-                "about",
-                "supplier",
-                "training",
-                "strategy",
-                "principle",
-                "eligibility",
-                "protest",
-                "faq",
-                "statistics",
-                "guidance",
-                "conduct",
-                "sanction",
-            ]
-            if any(w in title.lower() for w in nav_words):
-                continue
-
-            href = link.get("href", "")
-            if href.startswith("/"):
-                href = "https://procurement-notices.undp.org" + href
-
-            # Check if this is a notice link
-            if "notice" not in href.lower() and "procurement" not in href.lower():
-                continue
-
-            # Extract country
-            country = ""
-            title_lower = title.lower()
-            for hint, c in african_countries.items():
-                if hint in title_lower:
-                    country = c
-                    break
-
-            # Extract ref number
-            ref_match = re.search(r"(UNDP-[A-Z]{3}-\d+)", title)
-            ref = ref_match.group(1) if ref_match else ""
-
-            opportunities.append(
-                {
-                    "title": title[:200],
-                    "description": f"Ref: {ref}" if ref else title[:300],
-                    "organization": "UNDP",
-                    "organization_type": "onu",
-                    "country": country,
-                    "budget": "",
-                    "deadline": "",
-                    "url": href,
-                    "date": datetime.today().strftime("%Y-%m-%d"),
-                    "source": "undp",
-                }
-            )
-
-            if len(opportunities) >= 40:
+            if len(opportunities) >= 50:
                 break
 
     except Exception as e:
@@ -194,84 +123,5 @@ def scrape_undp():
     return opportunities
 
 
-def scrape_bad():
-    """Scrape AfDB procurement"""
-    opportunities = []
-    driver = None
-
-    african_countries = {
-        "senegal": "Sénégal",
-        "cote d'ivoire": "Côte d'Ivoire",
-        "morocco": "Maroc",
-        "tunisia": "Tunisie",
-        "cameroon": "Cameroun",
-        "mali": "Mali",
-    }
-
-    try:
-        driver = get_selenium_driver()
-        if not driver:
-            return opportunities
-
-        url = "https://www.afdb.org/en/projects-and-operations/procurement"
-        driver.get(url)
-        time.sleep(8)
-
-        soup = BeautifulSoup(driver.page_source, "lxml")
-
-        all_links = soup.find_all("a", href=True)
-
-        for link in all_links:
-            title = link.get_text(strip=True)
-            if not title or len(title) < 15:
-                continue
-
-            href = link.get("href", "")
-            if not href:
-                continue
-
-            if href.startswith("/"):
-                href = "https://www.afdb.org" + href
-
-            # Filter for project/procurement links only
-            if "project" not in href.lower() and "procurement" not in href.lower():
-                continue
-
-            # Extract country
-            country = ""
-            title_lower = title.lower()
-            for hint, c in african_countries.items():
-                if hint in title_lower:
-                    country = c
-                    break
-
-            opportunities.append(
-                {
-                    "title": title[:200],
-                    "description": title[:300],
-                    "organization": "AfDB (BAD)",
-                    "organization_type": "multilateral",
-                    "country": country,
-                    "budget": "",
-                    "deadline": "",
-                    "url": href,
-                    "date": datetime.today().strftime("%Y-%m-%d"),
-                    "source": "bad",
-                }
-            )
-
-            if len(opportunities) >= 40:
-                break
-
-    except Exception as e:
-        print(f"AfDB error: {e}")
-    finally:
-        if driver:
-            driver.quit()
-
-    return opportunities
-
-
 if __name__ == "__main__":
     print("UNDP:", len(scrape_undp()))
-    print("AfDB:", len(scrape_bad()))
