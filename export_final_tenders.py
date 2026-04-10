@@ -15,10 +15,34 @@ INCLUDE = [
     "formation",
     "education",
     "training",
-    "skills",
+    "apprentissage",
+    "elearning",
+    "e-learning",
     "tvet",
+    "skills development",
+    "capacity building",
+    "capacity development",
+    "teacher",
+    "curriculum",
+    "learning",
+    "pedagogy",
     "university",
     "ecole",
+    "employability",
+    "youth employment",
+    "job training",
+    "career",
+    "academic",
+    "pedagog",
+    "didactic",
+    "AI training",
+    "AI platform",
+    "digital learning",
+    "online learning",
+    "learning platform",
+    "MOOC",
+    "LMS",
+    "e-learning",
 ]
 EXCLUDE = [
     "oil",
@@ -29,7 +53,78 @@ EXCLUDE = [
     "computer",
     "furniture",
     "vehicle",
+    "who-we-are",
+    "/about",
+    "/contact",
+    "/faq",
+    "filtres",
 ]
+
+
+def is_valid_tender_url(url, title=""):
+    """Check URL is actually a tender/procurement notice, not a generic page"""
+    if not url:
+        return False
+
+    url_lower = url.lower()
+    title_lower = title.lower() if title else ""
+    text = url_lower + " " + title_lower
+
+    # Invalid patterns - these are NOT tenders
+    invalid = [
+        "/about",
+        "/who-we-are",
+        "/contact",
+        "/faq",
+        "/home",
+        "/index",
+        "/news",
+        "/events",
+        "/blog",
+        "/careers",
+        "/jobs",
+        "filtres",
+        "type=projets",
+        "val=",
+        "/annonce",
+        "/actualite",
+    ]
+    for inv in invalid:
+        if inv in url_lower:
+            return False
+
+    # Must have education keyword in title
+    if title:
+        has_edu = any(kw in title_lower for kw in INCLUDE)
+        if not has_edu:
+            return False
+
+    # Must contain tender-like patterns OR have an ID parameter
+    valid_patterns = [
+        "nego_id=",
+        "tender",
+        "procurement",
+        "bid",
+        "rfq",
+        "ref_no=",
+        "ref=",
+        "notice",
+        "request_for",
+        "spg=",
+        "cn=",
+        "view_notice",
+        "opportunity",
+    ]
+
+    for pat in valid_patterns:
+        if pat in url_lower:
+            return True
+
+    if re.search(r"[?&][a-z_]*id=\d+", url_lower):
+        return True
+
+    return False
+
 
 COUNTRIES = {
     "senegal": "Senegal",
@@ -85,15 +180,16 @@ def get_undp_tenders():
                                 country = cname
                                 break
 
-                        results.append(
-                            {
-                                "title": title[:100],
-                                "organization": "UNDP",
-                                "country": country,
-                                "url": full_url,
-                                "source": "UNDP",
-                            }
-                        )
+                        if is_valid_tender_url(full_url):
+                            results.append(
+                                {
+                                    "title": title[:100],
+                                    "organization": "UNDP",
+                                    "country": country,
+                                    "url": full_url,
+                                    "source": "UNDP",
+                                }
+                            )
         except:
             continue
 
@@ -461,7 +557,16 @@ def main():
 
     all_data = unique
 
-    print(f"\nTotal: {len(all_data)}")
+    # FILTER: Remove non-tender URLs and non-edu titles
+    filtered = [
+        op
+        for op in all_data
+        if is_valid_tender_url(op.get("url", ""), op.get("title", ""))
+    ]
+    removed = len(all_data) - len(filtered)
+    all_data = filtered
+
+    print(f"\nTotal: {len(all_data)} (filtered {removed} non-tenders)")
 
     # Export
     df = pd.DataFrame(all_data)
