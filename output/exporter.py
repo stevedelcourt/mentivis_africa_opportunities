@@ -11,25 +11,27 @@ def export_csv(data, custom_filename=None):
 
     cols = [
         "title",
-        "country",
         "organization",
-        "organization_type",
+        "country",
         "description",
         "budget",
         "deadline",
         "date",
+        "url",
         "score",
         "tag",
         "project_type",
         "mentivis_angle",
-        "source_type",
-        "keywords_found",
-        "url",
+        "organization_type",
+        "source",
     ]
 
     for col in cols:
         if col not in df.columns:
             df[col] = ""
+
+    for col in cols:
+        df[col] = df[col].fillna("").astype(str)
 
     df = df[cols]
 
@@ -40,7 +42,7 @@ def export_csv(data, custom_filename=None):
 
     os.makedirs("data/processed", exist_ok=True)
     filepath = f"data/processed/{filename}"
-    df.to_csv(filepath, index=False, encoding="utf-8")
+    df.to_csv(filepath, index=False, encoding="utf-8-sig")
 
     return filepath
 
