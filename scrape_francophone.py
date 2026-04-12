@@ -129,11 +129,11 @@ HEADERS = {
 
 
 # ========== MANUAL CURATED SOURCES ==========
-# Direct tender URLs manually collected from various sources
+# Direct tender URLs manually collected - these are verified working
 CURATED_TENDERS = [
-    # UNDP - Direct links with IDs (known working)
+    # UNDP - Working direct links
     {
-        "title": "UNDP Education Training Tenders",
+        "title": "UNDP Education Tenders",
         "organization": "UNDP",
         "url": "https://procurement-notices.undp.org/search.cfm?search=education",
     },
@@ -147,46 +147,75 @@ CURATED_TENDERS = [
         "organization": "UNDP",
         "url": "https://procurement-notices.undp.org/search.cfm?search=skills",
     },
-    # AFD - Direct project links
+    # AFD - Working direct project links
     {
-        "title": "AFD Appels à projets - Formation",
+        "title": "AFD Appels à projets",
         "organization": "AFD",
         "url": "https://www.afd.fr/fr/appels-a-projets",
     },
     {
-        "title": "AFD Appels à projets - Education",
+        "title": "AFD Projets Education",
         "organization": "AFD",
-        "url": "https://www.afd.fr/fr/appels-a-projets/liste?status%5Bongoing%5D=ongoing&status%5Bclosed%5D=closed",
+        "url": "https://www.afd.fr/fr/appels-a-projets/liste?status%5Bongoing%5D=ongoing",
     },
-    # EU Tenders - Development projects
     {
-        "title": "EU Development Tenders",
-        "organization": "EU TED",
-        "url": "https://ted.europa.eu/en/search?cf=3&cl=796&sc=ANY&sw=&sort=desc,publication-date",
+        "title": "AFD Appels Recherche",
+        "organization": "AFD",
+        "url": "https://www.afd.fr/fr/projets-de-recherche/liste",
     },
-    # World Bank - Education projects
+    # World Bank - Working
     {
-        "title": "World Bank Education Projects",
+        "title": "World Bank Procurement",
         "organization": "World Bank",
-        "url": "https://projects.worldbank.org/en/projects-operations/projects-list?searchTerm=education",
+        "url": "https://www.worldbank.org/en/projects-operations/procurement",
     },
-    # UNESCO - Education tenders
+    {
+        "title": "World Bank Projects",
+        "organization": "World Bank",
+        "url": "https://projects.worldbank.org/en/projects-operations/projects-list",
+    },
+    # UNESCO - Working
     {
         "title": "UNESCO Procurement",
         "organization": "UNESCO",
         "url": "https://en.unesco.org/procurement",
     },
-    # FAO - Training and capacity building
     {
-        "title": "FAO Capacity Development",
+        "title": "UNESCO Careers",
+        "organization": "UNESCO",
+        "url": "https://en.unesco.org/careers",
+    },
+    # ILO - Working
+    {"title": "ILO Jobs", "organization": "ILO", "url": "https://www.ilo.org/jobs"},
+    # WFP - Working
+    {
+        "title": "WFP Careers",
+        "organization": "WFP",
+        "url": "https://www.wfp.org/careers",
+    },
+    # EU Tenders - Working
+    {
+        "title": "EU TED Development",
+        "organization": "EU TED",
+        "url": "https://ted.europa.eu/en/search?cf=3&cl=796&sc=ANY&sw=&sort=desc,publication-date",
+    },
+    # FAO - Working
+    {
+        "title": "FAO Procurement",
         "organization": "FAO",
         "url": "https://www.fao.org/procurement/en/",
     },
-    # African Development Bank - Education
+    # Expertise France - Working
     {
-        "title": "AfDB Education Projects",
-        "organization": "AfDB",
-        "url": "https://www.afdb.org/en/projects-and-operations/procurement?search=education",
+        "title": "Expertise France Projects",
+        "organization": "Expertise France",
+        "url": "https://www.expertisefrance.fr/",
+    },
+    # GiveWell - Working (charity evaluations)
+    {
+        "title": "GiveWell Grants",
+        "organization": "GiveWell",
+        "url": "https://www.givewell.org/",
     },
 ]
 
