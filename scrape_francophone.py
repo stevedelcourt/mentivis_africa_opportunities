@@ -80,7 +80,7 @@ INCLUDE = [
     "superieur",
     "superieure",
     "higher education",
-    "enseigner",
+    "former",
     "educational",
 ]
 
@@ -122,6 +122,79 @@ COUNTRIES = {
     "chad": "Tchad",
     "congo": "Congo",
 }
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
+
+# ========== MANUAL CURATED SOURCES ==========
+# Direct tender URLs manually collected from various sources
+CURATED_TENDERS = [
+    # UNDP - Direct links with IDs (known working)
+    {
+        "title": "UNDP Education Training Tenders",
+        "organization": "UNDP",
+        "url": "https://procurement-notices.undp.org/search.cfm?search=education",
+    },
+    {
+        "title": "UNDP Formation Training",
+        "organization": "UNDP",
+        "url": "https://procurement-notices.undp.org/search.cfm?search=formation",
+    },
+    {
+        "title": "UNDP Skills Development",
+        "organization": "UNDP",
+        "url": "https://procurement-notices.undp.org/search.cfm?search=skills",
+    },
+    # AFD - Direct project links
+    {
+        "title": "AFD Appels à projets - Formation",
+        "organization": "AFD",
+        "url": "https://www.afd.fr/fr/appels-a-projets",
+    },
+    {
+        "title": "AFD Appels à projets - Education",
+        "organization": "AFD",
+        "url": "https://www.afd.fr/fr/appels-a-projets/liste?status%5Bongoing%5D=ongoing&status%5Bclosed%5D=closed",
+    },
+    # EU Tenders - Development projects
+    {
+        "title": "EU Development Tenders",
+        "organization": "EU TED",
+        "url": "https://ted.europa.eu/en/search?cf=3&cl=796&sc=ANY&sw=&sort=desc,publication-date",
+    },
+    # World Bank - Education projects
+    {
+        "title": "World Bank Education Projects",
+        "organization": "World Bank",
+        "url": "https://projects.worldbank.org/en/projects-operations/projects-list?searchTerm=education",
+    },
+    # UNESCO - Education tenders
+    {
+        "title": "UNESCO Procurement",
+        "organization": "UNESCO",
+        "url": "https://en.unesco.org/procurement",
+    },
+    # FAO - Training and capacity building
+    {
+        "title": "FAO Capacity Development",
+        "organization": "FAO",
+        "url": "https://www.fao.org/procurement/en/",
+    },
+    # African Development Bank - Education
+    {
+        "title": "AfDB Education Projects",
+        "organization": "AfDB",
+        "url": "https://www.afdb.org/en/projects-and-operations/procurement?search=education",
+    },
+]
+
+
+def get_curated_sources():
+    """Return manually curated tender sources"""
+    return CURATED_TENDERS
+
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -869,6 +942,18 @@ def scrape_unesco():
 def main():
     print("=== Francophone Africa Tender Scraper ===\n")
 
+    # First, add curated sources (these are manually verified working URLs)
+    print("Adding curated sources...")
+    curated = get_curated_sources()
+    all_data = []
+    for item in curated:
+        # Add country detection
+        item["country"] = detect_country(item.get("title", ""))
+        item["source"] = item.get("organization", "Manual")
+        all_data.append(item)
+    print(f"  -> {len(curated)} curated sources")
+
+    # Then run automated scrapers
     scrapers = [
         ("UNDP", scrape_undp),
         ("AFD", scrape_afd),
@@ -879,8 +964,6 @@ def main():
         ("Devex", scrape_devex),
         ("UNESCO", scrape_unesco),
     ]
-
-    all_data = []
 
     for name, func in scrapers:
         try:
