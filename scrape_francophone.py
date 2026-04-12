@@ -515,88 +515,15 @@ def scrape_minesup_cameroon():
 
 
 def scrape_ministere_tunisie():
-    """Ministere Education Tunisia"""
+    """Ministere Education Tunisia - try different pages"""
     results = []
     base = "https://www.education.gov.tn"
 
-    try:
-        r = requests.get(base, headers=HEADERS, timeout=15)
-        random_delay()
-
-        soup = BeautifulSoup(r.text, "lxml")
-        links = soup.find_all("a", href=True)
-
-        for link in links:
-            href = link.get("href", "")
-            title = link.get_text(strip=True)
-
-            if len(title) > 20 and "page_id" in href:
-                full_url = fix_url(href, base)
-
-                title_lower = title.lower()
-                if not any(inc in title_lower for inc in INCLUDE):
-                    continue
-
-                results.append(
-                    {
-                        "title": title[:100],
-                        "organization": "Ministere Education TN",
-                        "country": "Tunisie",
-                        "url": full_url,
-                        "source": "Ministere Tunisia",
-                    }
-                )
-    except Exception as e:
-        print(f"Ministere TN error: {e}")
-
-    return results[:20]
-
-
-def scrape_reliefweb():
-    """ReliefWeb jobs"""
-    results = []
-    base = "https://reliefweb.int"
-
-    try:
-        url = "https://reliefweb.int/jobs"
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        random_delay()
-
-        soup = BeautifulSoup(r.text, "lxml")
-        links = soup.find_all("a", href=True)
-
-        for link in links:
-            href = link.get("href", "")
-            title = link.get_text(strip=True)
-
-            if len(title) > 20 and "/job/" in href:
-                full_url = fix_url(href, base)
-
-                title_lower = title.lower()
-                if not any(inc in title_lower for inc in INCLUDE):
-                    continue
-
-                results.append(
-                    {
-                        "title": title[:100],
-                        "organization": "ReliefWeb",
-                        "country": detect_country(title),
-                        "url": full_url,
-                        "source": "ReliefWeb",
-                    }
-                )
-    except Exception as e:
-        print(f"ReliefWeb error: {e}")
-
-    return results[:20]
-
-
-def scrape_devex():
-    """Devex - try jobs/funding"""
-    results = []
-    base = "https://www.devex.com"
-
-    urls = ["https://www.devex.com/jobs", "https://www.devex.com/funding"]
+    # Try different page paths
+    urls = [
+        "https://www.education.gov.tn/?page_id=12",  # النفاذ إلى المعلومة
+        "https://www.education.gov.tn/?page_id=321",  # أخلاقيات العون العمومي
+    ]
 
     for url in urls:
         try:
@@ -610,7 +537,7 @@ def scrape_devex():
                 href = link.get("href", "")
                 title = link.get_text(strip=True)
 
-                if len(title) > 20 and ("job" in href or "project" in href):
+                if len(title) > 20 and "page_id" in href:
                     full_url = fix_url(href, base)
 
                     title_lower = title.lower()
@@ -620,15 +547,320 @@ def scrape_devex():
                     results.append(
                         {
                             "title": title[:100],
-                            "organization": "Devex",
-                            "country": detect_country(title),
+                            "organization": "Ministere Education TN",
+                            "country": "Tunisie",
                             "url": full_url,
-                            "source": "Devex",
+                            "source": "Ministere Tunisia",
                         }
                     )
         except Exception as e:
-            print(f"Devex error: {e}")
+            print(f"Ministere TN error: {e}")
             continue
+
+    # Try with Selenium for JS content
+    if not results and SELENIUM_AVAILABLE:
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            driver = webdriver.Chrome(options=options)
+
+            url = "https://www.education.gov.tn"
+            driver.get(url)
+            time.sleep(3)
+
+            soup = BeautifulSoup(driver.page_source, "lxml")
+            links = soup.find_all("a", href=True)
+
+            for link in links:
+                href = link.get("href", "")
+                title = link.get_text(strip=True)
+
+                if len(title) > 20:
+                    full_url = fix_url(href, base)
+
+                    title_lower = title.lower()
+                    if not any(inc in title_lower for inc in INCLUDE):
+                        continue
+
+                    if "/?" in href or "page_id" in href:
+                        results.append(
+                            {
+                                "title": title[:100],
+                                "organization": "Ministere Education TN",
+                                "country": "Tunisie",
+                                "url": full_url,
+                                "source": "Ministere Tunisia",
+                            }
+                        )
+
+            driver.quit()
+        except Exception as e:
+            print(f"Ministere TN Selenium error: {e}")
+
+    return results[:20]
+
+
+def scrape_reliefweb():
+    """ReliefWeb jobs - use Selenium for JS content"""
+    results = []
+    base = "https://reliefweb.int"
+
+    # Try with Selenium first
+    if SELENIUM_AVAILABLE:
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            driver = webdriver.Chrome(options=options)
+
+            url = "https://reliefweb.int/jobs"
+            driver.get(url)
+            time.sleep(5)
+
+            soup = BeautifulSoup(driver.page_source, "lxml")
+            links = soup.find_all("a", href=True)
+
+            for link in links:
+                href = link.get("href", "")
+                title = link.get_text(strip=True)
+
+                if len(title) > 20 and "/job/" in href:
+                    full_url = fix_url(href, base)
+
+                    title_lower = title.lower()
+                    if not any(inc in title_lower for inc in INCLUDE):
+                        continue
+
+                    results.append(
+                        {
+                            "title": title[:100],
+                            "organization": "ReliefWeb",
+                            "country": detect_country(title),
+                            "url": full_url,
+                            "source": "ReliefWeb",
+                        }
+                    )
+
+            driver.quit()
+        except Exception as e:
+            print(f"ReliefWeb Selenium error: {e}")
+
+    # Fallback to requests
+    if not results:
+        try:
+            url = "https://reliefweb.int/jobs"
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            random_delay()
+
+            soup = BeautifulSoup(r.text, "lxml")
+            links = soup.find_all("a", href=True)
+
+            for link in links:
+                href = link.get("href", "")
+                title = link.get_text(strip=True)
+
+                if len(title) > 20 and "/job/" in href:
+                    full_url = fix_url(href, base)
+
+                    title_lower = title.lower()
+                    if not any(inc in title_lower for inc in INCLUDE):
+                        continue
+
+                    results.append(
+                        {
+                            "title": title[:100],
+                            "organization": "ReliefWeb",
+                            "country": detect_country(title),
+                            "url": full_url,
+                            "source": "ReliefWeb",
+                        }
+                    )
+        except Exception as e:
+            print(f"ReliefWeb error: {e}")
+
+    return results[:20]
+
+
+def scrape_devex():
+    """Devex - use Selenium for JS content"""
+    results = []
+    base = "https://www.devex.com"
+
+    urls = ["https://www.devex.com/jobs", "https://www.devex.com/funding"]
+
+    # Try with Selenium first
+    if SELENIUM_AVAILABLE:
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
+            driver = webdriver.Chrome(options=options)
+
+            for url in urls:
+                try:
+                    driver.get(url)
+                    time.sleep(5)
+
+                    soup = BeautifulSoup(driver.page_source, "lxml")
+                    links = soup.find_all("a", href=True)
+
+                    for link in links:
+                        href = link.get("href", "")
+                        title = link.get_text(strip=True)
+
+                        if len(title) > 20 and ("job" in href or "project" in href):
+                            full_url = fix_url(href, base)
+
+                            title_lower = title.lower()
+                            if not any(inc in title_lower for inc in INCLUDE):
+                                continue
+
+                            results.append(
+                                {
+                                    "title": title[:100],
+                                    "organization": "Devex",
+                                    "country": detect_country(title),
+                                    "url": full_url,
+                                    "source": "Devex",
+                                }
+                            )
+                except Exception as e:
+                    print(f"Devex URL error: {e}")
+                    continue
+
+            driver.quit()
+        except Exception as e:
+            print(f"Devex Selenium init error: {e}")
+
+    # Fallback to requests
+    if not results:
+        for url in urls:
+            try:
+                r = requests.get(url, headers=HEADERS, timeout=15)
+                random_delay()
+
+                soup = BeautifulSoup(r.text, "lxml")
+                links = soup.find_all("a", href=True)
+
+                for link in links:
+                    href = link.get("href", "")
+                    title = link.get_text(strip=True)
+
+                    if len(title) > 20 and ("job" in href or "project" in href):
+                        full_url = fix_url(href, base)
+
+                        title_lower = title.lower()
+                        if not any(inc in title_lower for inc in INCLUDE):
+                            continue
+
+                        results.append(
+                            {
+                                "title": title[:100],
+                                "organization": "Devex",
+                                "country": detect_country(title),
+                                "url": full_url,
+                                "source": "Devex",
+                            }
+                        )
+            except Exception as e:
+                print(f"Devex error: {e}")
+                continue
+
+    return results[:20]
+
+
+def scrape_unesco():
+    """UNESCO - career opportunities"""
+    results = []
+    base = "https://en.unesco.org"
+
+    urls = [
+        "https://en.unesco.org/careers",
+        "https://en.unesco.org/careers/jobs",
+    ]
+
+    if SELENIUM_AVAILABLE:
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            driver = webdriver.Chrome(options=options)
+
+            for url in urls:
+                try:
+                    driver.get(url)
+                    time.sleep(3)
+
+                    soup = BeautifulSoup(driver.page_source, "lxml")
+                    links = soup.find_all("a", href=True)
+
+                    for link in links:
+                        href = link.get("href", "")
+                        title = link.get_text(strip=True)
+
+                        if len(title) > 20 and (
+                            "job" in href or "career" in href or "vacancy" in href
+                        ):
+                            full_url = fix_url(href, base)
+
+                            title_lower = title.lower()
+                            if not any(inc in title_lower for inc in INCLUDE):
+                                continue
+
+                            results.append(
+                                {
+                                    "title": title[:100],
+                                    "organization": "UNESCO",
+                                    "country": detect_country(title),
+                                    "url": full_url,
+                                    "source": "UNESCO",
+                                }
+                            )
+                except Exception as e:
+                    continue
+
+            driver.quit()
+        except Exception as e:
+            print(f"UNESCO Selenium error: {e}")
+
+    if not results:
+        for url in urls:
+            try:
+                r = requests.get(url, headers=HEADERS, timeout=15)
+                random_delay()
+
+                soup = BeautifulSoup(r.text, "lxml")
+                links = soup.find_all("a", href=True)
+
+                for link in links:
+                    href = link.get("href", "")
+                    title = link.get_text(strip=True)
+
+                    if len(title) > 20 and ("job" in href or "vacancy" in href):
+                        full_url = fix_url(href, base)
+
+                        title_lower = title.lower()
+                        if not any(inc in title_lower for inc in INCLUDE):
+                            continue
+
+                        results.append(
+                            {
+                                "title": title[:100],
+                                "organization": "UNESCO",
+                                "country": detect_country(title),
+                                "url": full_url,
+                                "source": "UNESCO",
+                            }
+                        )
+            except Exception as e:
+                continue
 
     return results[:20]
 
@@ -645,6 +877,7 @@ def main():
         ("Ministere Tunisia", scrape_ministere_tunisie),
         ("ReliefWeb", scrape_reliefweb),
         ("Devex", scrape_devex),
+        ("UNESCO", scrape_unesco),
     ]
 
     all_data = []
